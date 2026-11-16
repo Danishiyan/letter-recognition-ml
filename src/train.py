@@ -5,6 +5,7 @@ Outputs:
   reports/metrics.csv                      - one row per model
   reports/figures/model_comparison.png     - accuracy / macro-F1 bar chart
   reports/figures/confusion_matrix_best.png
+  models/best_model.joblib                 - scaler + best model, ready for prediction
 """
 
 import time
@@ -12,6 +13,7 @@ from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")  # save figures without opening windows
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -27,8 +29,10 @@ from sklearn.tree import DecisionTreeClassifier
 
 from src.preprocess import RANDOM_STATE, get_train_test
 
-REPORTS = Path(__file__).resolve().parents[1] / "reports"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPORTS = PROJECT_ROOT / "reports"
 FIGURES = REPORTS / "figures"
+MODEL_FILE = PROJECT_ROOT / "models" / "best_model.joblib"
 
 # name -> (estimator, small hyperparameter grid)
 MODELS = {
@@ -48,7 +52,7 @@ MODELS = {
 
 
 def main(models=MODELS):
-    X_train, X_test, y_train, y_test = get_train_test()
+    X_train, X_test, y_train, y_test, scaler = get_train_test()
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
 
     rows, best = [], None
@@ -68,7 +72,7 @@ def main(models=MODELS):
         rows.append(row)
         print(f"{name:20s} test acc = {row['test_accuracy']:.4f}  ({row['train_seconds']:.0f}s)")
         if best is None or row["test_accuracy"] > best[1]:
-            best = (name, row["test_accuracy"], y_pred)
+            best = (name, row["test_accuracy"], y_pred, search.best_estimator_)
 
     results = pd.DataFrame(rows).sort_values("test_accuracy", ascending=False)
     REPORTS.mkdir(exist_ok=True)
@@ -84,7 +88,7 @@ def main(models=MODELS):
     plt.close()
 
     # Confusion matrix of the best model
-    name, acc, y_pred = best
+    name, acc, y_pred, best_estimator = best
     fig, ax = plt.subplots(figsize=(11, 10))
     ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax, colorbar=False,
                                             include_values=False, cmap="Blues")
@@ -93,8 +97,28 @@ def main(models=MODELS):
     plt.savefig(FIGURES / "confusion_matrix_best.png", dpi=150)
     plt.close()
 
+    save_best_model(scaler, best_estimator, name, acc, list(X_train.columns))
+
     print("\n", results[["model", "test_accuracy", "test_macro_f1"]].round(4).to_string(index=False))
     return results
+
+
+def save_best_model(scaler, estimator, name, accuracy, features):
+    """Save the scaler + best model as ONE pipeline, plus some info about it.
+
+    Pipeline = raw features in -> scaled -> model -> letter out.
+    Both steps are already fitted, so the pipeline is ready to predict.
+    """
+    pipeline = Pipeline([("scaler", scaler), ("model", estimator)])
+    bundle = {
+        "pipeline": pipeline,
+        "model_name": name,
+        "test_accuracy": accuracy,
+        "features": features,  # column order the pipeline expects
+    }
+    MODEL_FILE.parent.mkdir(exist_ok=True)
+    joblib.dump(bundle, MODEL_FILE)
+    print(f"Saved best model ({name}) to {MODEL_FILE.relative_to(PROJECT_ROOT)}")
 
 
 if __name__ == "__main__":

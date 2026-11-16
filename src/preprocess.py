@@ -16,7 +16,11 @@ TEST_SIZE = 0.2
 
 
 def get_train_test(engineered: bool = True):
-    """Return X_train, X_test, y_train, y_test (scaled) and the feature names."""
+    """Return X_train, X_test, y_train, y_test (scaled) and the fitted scaler.
+
+    The scaler is returned so it can be saved with the model: new data must be
+    scaled with the SAME mean/std that the model was trained on.
+    """
     df = load_data()
     if engineered:
         df = add_engineered_features(df)
@@ -32,11 +36,11 @@ def get_train_test(engineered: bool = True):
     scaler = StandardScaler().fit(X_train)  # learn mean/std from TRAIN only
     X_train = pd.DataFrame(scaler.transform(X_train), columns=X.columns, index=X_train.index)
     X_test = pd.DataFrame(scaler.transform(X_test), columns=X.columns, index=X_test.index)
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, scaler
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = get_train_test()
+    X_train, X_test, y_train, y_test, _ = get_train_test()
     print("Train:", X_train.shape, "| Test:", X_test.shape)
     print("Train mean (should be ~0):", round(X_train.values.mean(), 4))
     print("Train std  (should be ~1):", round(X_train.values.std(), 4))

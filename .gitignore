@@ -227,3 +227,7 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+
+# Trained models (re-create with: python -m src.train)
+models/*
+!models/.gitkeep
