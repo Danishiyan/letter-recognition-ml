@@ -110,6 +110,9 @@ def save_best_model(scaler, estimator, name, accuracy, features):
     Both steps are already fitted, so the pipeline is ready to predict.
     """
     pipeline = Pipeline([("scaler", scaler), ("model", estimator)])
+    # Keep column names between steps: the model was trained on a DataFrame,
+    # so the scaler must hand it a DataFrame too (not a plain NumPy array).
+    pipeline.set_output(transform="pandas")
     bundle = {
         "pipeline": pipeline,
         "model_name": name,
