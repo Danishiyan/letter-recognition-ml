@@ -35,7 +35,7 @@ def predict_letters(raw_rows: pd.DataFrame, bundle=None) -> list:
     return list(bundle["pipeline"].predict(X))
 
 
-def main(n=5):
+def main(n=10):
     bundle = load_model()
     print(f"Model: {bundle['model_name']} (test accuracy {bundle['test_accuracy']:.3f})\n")
 
