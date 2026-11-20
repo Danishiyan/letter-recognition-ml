@@ -71,6 +71,31 @@ hyperparameters are tuned with cross-validation on the training set. The test se
 
 ![Confusion matrix of the best model](reports/figures/confusion_matrix_best.png)
 
+## Save & predict
+
+After training, the best model is saved so it can be used without retraining:
+
+```
+src/train.py   → models/best_model.joblib
+                 { pipeline: StandardScaler + SVM,  model_name,  test_accuracy,  features }
+src/predict.py → load bundle → add the 5 engineered features → pipeline.predict()
+```
+
+- **Scaler and model are saved together** as one scikit-learn `Pipeline`, so new data is scaled
+  with exactly the numbers learned from the training set (no training–serving skew).
+- **The feature list is saved too**, so columns always arrive in the same order as in training.
+- `models/` is ignored by Git (`models/*`, except `.gitkeep`): the file is rebuilt by `python -m src.train`.
+- The demo predicts 10 rows from the **test set**, recreated with the same split and seed, so the
+  model has never seen them. If no saved model exists, it stops with a clear `FileNotFoundError`.
+
+Example output:
+
+```
+Model: SVM (RBF) (test accuracy 0.973)
+
+  true = ...   predicted = ...   OK
+```
+
 ## How to run
 
 ```bash
@@ -80,7 +105,8 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python -m src.train      # downloads the data, trains all 7 models (~1 min), writes reports/
+python -m src.train      # downloads the data, trains all 7 models (~1 min), writes reports/ + models/
+python -m src.predict    # loads the saved model and predicts 10 unseen letters
 ```
 
 Exploration notebook: `notebooks/01_eda.ipynb`
@@ -89,9 +115,10 @@ Exploration notebook: `notebooks/01_eda.ipynb`
 
 ```
 ├── data/            raw/ and processed/ (not in Git)
+├── models/          best_model.joblib (not in Git, created by src.train)
 ├── notebooks/       01_eda.ipynb
 ├── reports/         metrics.csv, figures/
-├── src/             data.py, features.py, preprocess.py, train.py
+├── src/             data.py, features.py, preprocess.py, train.py, predict.py
 └── requirements.txt
 ```
 
