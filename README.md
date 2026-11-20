@@ -93,7 +93,11 @@ Example output:
 ```
 Model: SVM (RBF) (test accuracy 0.973)
 
-  true = ...   predicted = ...   OK
+  true = I   predicted = I   OK
+  true = X   predicted = X   OK
+  true = S   predicted = S   OK
+  true = T   predicted = T   OK
+  ...      (10/10 correct in this run)
 ```
 
 ## How to run
